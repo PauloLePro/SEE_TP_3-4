@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "algorithm": "c",
+        "fcntl.h": "c",
+        "mman.h": "c"
+    }
+}
