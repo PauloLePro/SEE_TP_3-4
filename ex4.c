@@ -1,4 +1,4 @@
-//gcc ex4 ex4.c -o -lpthread -lrt
+//gcc -o ex4 ex4.c -lpthread -lrt
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -68,7 +68,7 @@ void *produit_scalaire()
     }
 
     pthread_mutex_lock(&mutex); // On verrouille le mutex
-    printf("resultat intermédiaire = %d\n", struct_vec.resultat_intermediaires);
+    printf("%d resultat intermédiaire = %d\n", struct_vec.thread_id, struct_vec.resultat_intermediaires);
 
     if (mq_send(mq, (char *)&struct_vec.resultat_intermediaires, sizeof(struct_vec.resultat_intermediaires), 0) == -1)
     {
