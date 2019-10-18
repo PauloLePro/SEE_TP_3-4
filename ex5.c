@@ -1,3 +1,5 @@
+//gcc -o ex5 ex5.c -lrt ./ex5 fichasync.txt
+
 #include <aio.h>
 #include <stdio.h>
 #include <stdlib.h>

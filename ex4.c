@@ -87,9 +87,6 @@ void *affiche_resultat()
             pthread_exit(NULL);
         }
         compteur_thread++;
-
-        printf("%d valeur inter \n", (int)*buffer);
-
         result += (int)*buffer;
     }
 
@@ -149,40 +146,19 @@ int main(int argc, char *argv[])
 
     int id_thread[4] = {0, 1, 2, 3};
 
-    printf("Creation du thread %d\n", 0);
-    rc = pthread_create(&thread[0], &attr, produit_scalaire, &id_thread[0]);
-    if (rc)
+    for (int t = 0; t < (NB_THREADS - 1); t++)
     {
-        printf("ERROR; le code de retour de pthread_create() est %d\n", rc);
-        exit(-1);
+        printf("Creation du thread %d\n", t);
+        rc = pthread_create(&thread[t], &attr, produit_scalaire, &id_thread[t]);
+        if (rc)
+        {
+            printf("ERROR; le code de retour de pthread_create() est %d\n", rc);
+            exit(-1);
+        }
     }
 
-    printf("Creation du thread %d\n", 1);
-    rc = pthread_create(&thread[1], &attr, produit_scalaire, &id_thread[1]);
-    if (rc)
-    {
-        printf("ERROR; le code de retour de pthread_create() est %d\n", rc);
-        exit(-1);
-    }
-
-    printf("Creation du thread %d\n", 2);
-    rc = pthread_create(&thread[2], &attr, produit_scalaire, &id_thread[2]);
-    if (rc)
-    {
-        printf("ERROR; le code de retour de pthread_create() est %d\n", rc);
-        exit(-1);
-    }
-
-    printf("Creation du thread %d\n", 3);
-    rc = pthread_create(&thread[3], &attr, produit_scalaire, &id_thread[3]);
-    if (rc)
-    {
-        printf("ERROR; le code de retour de pthread_create() est %d\n", rc);
-        exit(-1);
-    }
-
-    printf("Creation du thread %d\n", 4);
-    rc_aff = pthread_create(&thread[4], &attr_aff, affiche_resultat, NULL);
+    printf("Creation du thread %d\n", NB_THREADS - 1);
+    rc_aff = pthread_create(&thread[NB_THREADS - 1], &attr_aff, affiche_resultat, NULL);
     if (rc_aff)
     {
         printf("ERROR; le code de retour de pthread_create() est %d\n", rc);
