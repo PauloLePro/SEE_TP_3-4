@@ -52,7 +52,7 @@ void init_vecteur(int *vecteur)
 
 void *produit_scalaire(void *param)
 {
-    Str_gestion_vec *data = (struct Str_gestion_vec *)param;
+    Str_gestion_vec *data = (Str_gestion_vec *)param;
 
     for (int i = 0; i < 100; i++)
     {

@@ -21,27 +21,19 @@
 #define MAX_MESSAGES 10
 #define MAX_MSG_SIZE 1024
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; /* Création du mutex */
-pthread_cond_t tlm_rep;
-
-pthread_mutex_t mutex_aff = PTHREAD_MUTEX_INITIALIZER; /* Création du mutex */
-
-pthread_mutex_t mutex_thread_id = PTHREAD_MUTEX_INITIALIZER; /* Création du mutex */
-
 int indice_debut_vecteur[4];
 
 mqd_t mq;
 struct mq_attr attr_file;
-char buffer[MAX_MSG_SIZE + 1];
+char *buffer;
+int mq_buffer = 0;
+int compteur_thread = 0;
 
 typedef struct Str_gestion_vec
 {
     int vecteur1[TAILLE_VECTEUR];
     int vecteur2[TAILLE_VECTEUR];
 
-    int resultat_intermediaires;
-    int compteur_thread;
-    int thread_id;
 } Str_gestion_vec;
 
 Str_gestion_vec struct_vec;
@@ -60,56 +52,50 @@ void init_vecteur(int *vecteur)
     }
 }
 
-void *produit_scalaire()
+void *produit_scalaire(void *arg)
 {
+    int *data = (int *)arg;
+
+    int resultat_intermediaires = 0;
+
     for (int i = 0; i < 100; i++)
     {
-        struct_vec.resultat_intermediaires += struct_vec.vecteur1[indice_debut_vecteur[struct_vec.thread_id] + i] * struct_vec.vecteur2[indice_debut_vecteur[struct_vec.thread_id] + i];
+        resultat_intermediaires += struct_vec.vecteur1[indice_debut_vecteur[*data] + i] * struct_vec.vecteur2[indice_debut_vecteur[*data] + i];
     }
 
-    pthread_mutex_lock(&mutex); // On verrouille le mutex
-    printf("%d resultat intermédiaire = %d\n", struct_vec.thread_id, struct_vec.resultat_intermediaires);
+    printf("%d resultat intermédiaire = %d\n", *data, resultat_intermediaires);
 
-    if (mq_send(mq, (char *)&struct_vec.resultat_intermediaires, sizeof(struct_vec.resultat_intermediaires), 0) == -1)
+    if (mq_send(mq, (char *)&resultat_intermediaires, sizeof(resultat_intermediaires), 0) == -1)
     {
         perror("Error mq_send() :");
     }
-    struct_vec.resultat_intermediaires = 0;
-    struct_vec.compteur_thread++;
 
-    if (struct_vec.compteur_thread == (NB_THREADS - 1))
-    {
-        pthread_cond_signal(&tlm_rep);
-    }
-    pthread_mutex_unlock(&mutex); // On déverrouille le mutex
+    resultat_intermediaires = 0;
 
-    pthread_exit((void *)0);
+    pthread_exit(NULL);
 }
 
 void *affiche_resultat()
 {
     int result = 0;
 
-    pthread_mutex_lock(&mutex_aff);
-    while (struct_vec.compteur_thread != (NB_THREADS - 1))
+    while (compteur_thread != (NB_THREADS - 1))
     {
-        pthread_cond_wait(&tlm_rep, &mutex_aff);
-    }
-
-    for (size_t i = 0; i < NB_THREADS - 1; i++)
-    {
-        if (mq_receive(mq, buffer, MAX_MSG_SIZE + 1, 0) == -1)
+        if (mq_receive(mq, buffer, mq_buffer, 0) == -1)
         {
-            perror("Error mq_receive() :");
-            exit(1);
+            perror("mq_receive");
+            pthread_exit(NULL);
         }
+        compteur_thread++;
 
-        //result += ((int *)buffer)[i];
+        printf("%d valeur inter \n", (int)*buffer);
+
         result += (int)*buffer;
     }
 
     printf("resultat_global = %d\n", result);
-    pthread_mutex_unlock(&mutex_aff);
+
+    pthread_exit(NULL);
 }
 
 int main(int argc, char *argv[])
@@ -128,10 +114,6 @@ int main(int argc, char *argv[])
     indice_debut_vecteur[2] = 200;
     indice_debut_vecteur[3] = 300;
 
-    struct_vec.resultat_intermediaires = 0;
-    struct_vec.compteur_thread = 0;
-    struct_vec.thread_id = 0;
-
     attr_file.mq_flags = 0;
     attr_file.mq_maxmsg = MAX_MESSAGES;
     attr_file.mq_msgsize = MAX_MSG_SIZE;
@@ -143,6 +125,21 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    if (mq_getattr(mq, &attr_file) != 0)
+    {
+        perror("error mq_getattr");
+        return -1;
+    }
+
+    mq_buffer = attr_file.mq_msgsize;
+
+    buffer = malloc(mq_buffer);
+    if (buffer == NULL)
+    {
+        perror("error malloc");
+        return -1;
+    }
+
     /* Initialisation et activation d’attributs lié au threads*/
     pthread_attr_init(&attr);                                    //valeur par défaut
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE); //attente du thread possible
@@ -150,29 +147,42 @@ int main(int argc, char *argv[])
     pthread_attr_init(&attr_aff);                                    //valeur par défaut
     pthread_attr_setdetachstate(&attr_aff, PTHREAD_CREATE_JOINABLE); //attente du thread possible
 
-    pthread_mutex_init(&mutex, NULL);
-    pthread_mutex_init(&mutex_aff, NULL);
-    pthread_mutex_init(&mutex_thread_id, NULL);
+    int id_thread[4] = {0, 1, 2, 3};
 
-    pthread_cond_init(&tlm_rep, NULL);
-
-    for (int t = 0; t < (NB_THREADS - 1); t++)
+    printf("Creation du thread %d\n", 0);
+    rc = pthread_create(&thread[0], &attr, produit_scalaire, &id_thread[0]);
+    if (rc)
     {
-        pthread_mutex_lock(&mutex_thread_id);
-        printf("Creation du thread %d\n", t);
-        indice_debut_vecteur[struct_vec.thread_id];
-        rc = pthread_create(&thread[t], &attr, produit_scalaire, NULL);
-        struct_vec.thread_id++;
-        if (rc)
-        {
-            printf("ERROR; le code de retour de pthread_create() est %d\n", rc);
-            exit(-1);
-        }
-        pthread_mutex_unlock(&mutex_thread_id);
+        printf("ERROR; le code de retour de pthread_create() est %d\n", rc);
+        exit(-1);
     }
 
-    printf("Creation du thread %d\n", NB_THREADS - 1);
-    rc_aff = pthread_create(&thread[(NB_THREADS - 1)], &attr_aff, affiche_resultat, NULL);
+    printf("Creation du thread %d\n", 1);
+    rc = pthread_create(&thread[1], &attr, produit_scalaire, &id_thread[1]);
+    if (rc)
+    {
+        printf("ERROR; le code de retour de pthread_create() est %d\n", rc);
+        exit(-1);
+    }
+
+    printf("Creation du thread %d\n", 2);
+    rc = pthread_create(&thread[2], &attr, produit_scalaire, &id_thread[2]);
+    if (rc)
+    {
+        printf("ERROR; le code de retour de pthread_create() est %d\n", rc);
+        exit(-1);
+    }
+
+    printf("Creation du thread %d\n", 3);
+    rc = pthread_create(&thread[3], &attr, produit_scalaire, &id_thread[3]);
+    if (rc)
+    {
+        printf("ERROR; le code de retour de pthread_create() est %d\n", rc);
+        exit(-1);
+    }
+
+    printf("Creation du thread %d\n", 4);
+    rc_aff = pthread_create(&thread[4], &attr_aff, affiche_resultat, NULL);
     if (rc_aff)
     {
         printf("ERROR; le code de retour de pthread_create() est %d\n", rc);
@@ -192,8 +202,6 @@ int main(int argc, char *argv[])
         printf("le join a fini avec le thread %d et a donne le status= %ld\n", t, (long)status);
     }
 
-    pthread_mutex_destroy(&mutex);
-    pthread_cond_destroy(&tlm_rep);
     pthread_exit(NULL);
 
     mq_unlink(QUEUE_NAME);
