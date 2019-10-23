@@ -43,7 +43,6 @@ void *produit_scalaire(void *param)
     resultat_global += resultat;
     printf("resultat intermédiaire = %d\n", resultat);
     pthread_mutex_unlock(&mutex); /* On déverrouille le mutex */
-
     pthread_exit((void *)0);
 }
 
