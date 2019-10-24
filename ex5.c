@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     memset(&act, '\0', sizeof(act));
 
     //Ouverture du fichier (spécifié en argument) sur lequel l’E/S va être effectuée
-    if ((fd = open(argv[1], O_RDWR, 0600)) == -1)
+    if ((fd = open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, 0644)) == -1)
     {
         perror("error open");
         return -1;
@@ -63,7 +63,10 @@ int main(int argc, char *argv[])
     }
 
     //definition du bloc de contrôle de l’entrée/sortie
-    cb.aio_buf = malloc(11);
+    if ((cb.aio_buf = malloc(11)) == NULL)
+    {
+        perror("malloc");
+    }
     cb.aio_fildes = fd; //récupérer le descripteur d’un fichier à partir de son nom
     cb.aio_nbytes = 10;
     cb.aio_offset = 0;
@@ -72,7 +75,10 @@ int main(int argc, char *argv[])
     cb.aio_sigevent.sigev_signo = SIGRTMIN;
     cb.aio_sigevent.sigev_value.sival_int = 0;
 
-    cb1.aio_buf = malloc(11);
+    if ((cb1.aio_buf = malloc(11)) == NULL)
+    {
+        perror("malloc");
+    }
     cb1.aio_fildes = fd; //récupérer le descripteur d’un fichier à partir de son nom
     cb1.aio_nbytes = 10;
     cb1.aio_offset = 0;
