@@ -77,19 +77,15 @@ void *produit_scalaire(void *arg)
 
     int resultat_intermediaires = 0;
 
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 200; i++)
     {
         resultat_intermediaires += struct_vec.vecteur1[indice_debut_vecteur[*data] + i] * struct_vec.vecteur2[indice_debut_vecteur[*data] + i];
     }
-
-    printf("%d resultat intermédiaire = %d\n", *data, resultat_intermediaires);
 
     if (mq_send(mq, (char *)&resultat_intermediaires, sizeof(resultat_intermediaires), 0) == -1)
     {
         perror("Error mq_send() :");
     }
-
-    resultat_intermediaires = 0;
 
     pthread_exit(NULL);
 }
@@ -129,13 +125,13 @@ int main(int argc, char *argv[])
     struct sigaction act;
     memset(&act, '\0', sizeof(act));
 
-    if ((fd1 = open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, 0644)) == -1)
+    if ((fd1 = open(argv[1], O_CREAT | O_RDWR, 0644)) == -1)
     {
         perror("error open");
         return -1;
     }
 
-    if ((fd2 = open(argv[2], O_CREAT | O_WRONLY | O_TRUNC, 0644)) == -1)
+    if ((fd2 = open(argv[2], O_CREAT | O_RDWR, 0644)) == -1)
     {
         perror("error open");
         return -1;
@@ -242,11 +238,6 @@ int main(int argc, char *argv[])
     {
         perror("error aio_suspend :");
     }
-
-    /*if (lio_listio(LIO_WAIT, (struct aiocb *const *)cbs, 4, NULL))
-    {
-        perror("error lio_listio :");
-    }*/
 
     if (aio_return(&cb) == -1)
     {

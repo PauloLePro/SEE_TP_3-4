@@ -1,4 +1,4 @@
-//gcc -o ex1 ex1.c -lpthread
+//gcc -o ex2 ex2.c -lpthread
 
 #include <stdlib.h>
 #include <stdio.h>

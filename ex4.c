@@ -87,6 +87,7 @@ void *affiche_resultat()
             pthread_exit(NULL);
         }
         compteur_thread++;
+
         result += (int)*buffer;
     }
 

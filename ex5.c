@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     memset(&act, '\0', sizeof(act));
 
     //Ouverture du fichier (spécifié en argument) sur lequel l’E/S va être effectuée
-    if ((fd = open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, 0644)) == -1)
+    if ((fd = open(argv[1], O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1)
     {
         perror("error open");
         return -1;
